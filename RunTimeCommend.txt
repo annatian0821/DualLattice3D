@@ -1,0 +1,19 @@
+///////////////////////////////////////
+///  Input file for LEM 3D 1.0.1    ///
+///  Run Time Command Interface     ///
+///////////////////////////////////////
+
+This is a file that is read by program every step so some parameter can be changed in run-time
+Every value before an equal sign is ignored by program
+After reading CommandID, the program read 2 parameters for each input, the first is a flag, 1 (true) indicates to accept the value in 2nd parameter
+0 (false) instructs the program to ignore the value in 2nd parameter and continue for reading next parameter
+All characters are skipped before #
+(bool)			StopCalculation				= 0
+(unsigned)		CommandID					= 0			//Start from one, increase the number for next issue of command
+														//0 for ignore the command thereafter
+(unsigned)		SampleRate					= 0 5
+(unsigned)		MaxTotalStep				= 0 50000	// Max total step		
+(unsigned)		MaxPerStep_BrokenLattice	= 0 50		//Control no of broken lattice each step
+(double)		LoadIncrFactor				= 0 1.1		//Determine the min. increment of loading, value > 1.0
+(double)		LoadDecrFactor				= 0 1.00	//Reduction of loading during relaxation, value < 1.0
+(double)		TimePerStep					= 0 0.5		//For fluid calculation (s)

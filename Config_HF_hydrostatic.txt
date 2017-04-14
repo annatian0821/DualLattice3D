@@ -1,0 +1,100 @@
+////////////////////////////////////
+///  Input file for LEM 3D 1.0.1 ///
+///////////////////////////////////
+ONLY parameter after equal sign is read
+
+All characters are skipped before #
+Dimensions of Model:
+(unsigned)		ProblemID					= 1				// 0 for UTS, 1 for hydraulic fracturing, 2 for well injection, 999 for testing (UTS), 9999 for testing (HF)
+(unsigned)		GeometryID					= 3				// 0: penny shape crack, 1: well, 2: double notch, 3: rough penny shape crack, 4: well with notch
+(int)			Nx 							= 50   			// in m
+(int)			Ny 							= 50
+(int)			Nz 							= 50
+
+
+(double)		UnitLength					= 2.0
+(double)		ScaleBoundary				= 2.0			//The scale factor for the size of coarser mesh (dictate size of outer boundaries
+(double)		ScaleOuterLength			= 2.0			//The scale factor to determine the coarseness of outer mesh
+(double)		CrackRadius					= 0.25			//The radius of crack relative to Inner length (Nx*UnitLength)
+(double) 		NormLatStiffness 			= 2.0e7         //Material stiffness ks
+(double)		ShearToAxialStiffnessRatio  = 0.3			//alpha is ks/kn, default is 1.0
+(double)		MomentToAxialStiffnessRatio = 1.0			//stiffness ratio of axial to flexural stiffness
+(double) 		MicroAxialStrength[0] 		= 2000.0			//elongation need to break a lattice (Tension)
+(double)		MicroAxialStrength[1] 		= -1.0e10		//contraction need to break a lattice (Compression)
+(double)		MicroShearStrength			= 8000.0
+(double)		Phi							= 30.0			//angle phi for MC criterion			
+(double)		StrengthFactor				= 1.0			//Modification factor for strength
+(double) 		BreakStress					= -1.0			//Max. principal stress to break a lattice
+(double)		MaxPressure					= 50000.0			//Max fluid pressure allowed (kPa)
+(double)		InjectRate					= 0.25			//Injection rate (m3/s)
+(double)		Viscosity					= 3e-6			//Viscosity of fluid, 1e-6 for water
+(double)		LeakOffCoeff				= 0e-3			//Leak Off coefficient
+(double)		TimePerStep					= 0.25			//For fluid calculation (s)
+(double)		InitTime					= 15.0			//Initial time  (s)
+
+(double)		PackingDensity				= 0.5			//Percent from most dense HCF packing 0.7405
+(double)		MinArea						= 0.0001		//Normalized min area of surface each lattice represent (actual area MinArea*D*D) L - 1.0 -> 0.002
+(double)		MinApecture					= 0.0			// Minimum aperture to define closure of crack
+
+(double)		LoadIncrFactor				= 1.2			//Determine the min. increment of loading, value > 1.0
+(double)		LoadDecrFactor				= 0.8			//Reduction of loading during relaxation, value < 1.0
+(double)		FluidFactor					= 0.01			//Fluid factor >0.0, related to sensitivity of fluid system
+(double)		InitForce					= 2500.0 		//Specify the initial pressure (kPa) or initial displacement
+
+(double)		ReConRatio					= 0.1			//Ratio applied to lattice stiffness for reconnected lattices
+(double)		PCG_Precision				= 0.00025		//Precision for Preconditioned Conjugate Gradient Solver
+(double)		Sigma						= 0.5			//Parameter for lattice strength distribution
+(double) 		Disp_Scale					= 0
+
+(unsigned)		LatFailureCriterion			= 2 			// 0: tensile strength, 1: MC criterion, 2: tensile and shear strength
+(unsigned)		StrengthDistModel			= 2				// 0: no strength distribution, 1: normal distribution, 2: lognormal 3: Weibull
+(unsigned)		LoadDir						= 2				//Load direction for UCS
+(unsigned)		LoadFace					= 5				//Load face for UCS
+(unsigned) 		MaxPerStep_BrokenLattice	= 20			//Control no of broken lattice each step
+(unsigned) 		BoundaryLoadCase 			= 0				//Loading exerted on boundary, 0 : no boundary disp applied
+(unsigned) 		Loadstep 					= 100000
+(unsigned)		MaxRelaxStep				= 1000					
+(unsigned)		MaxTotalStep				= 1000000				// Max total step		
+(unsigned)		SampleRate;					= 10				// The frequency of printing full node and lattice information (1 means to output every time)
+(unsigned) 		ThreadNumUsed		 		= 4				// No of thread use for OpenMP
+
+(bool)			Use_UnevenMesh				= 1		
+(bool) 			Use_Eigen		 			= 1				// 1: Use Matrix Library Eigen v3, 0: Use built-in PCG Solver
+(bool) 			Use_CompactStiffnessMatrix	= 1				// Assemble smaller stiffness matrix by dropping the restrained DOF (Only for using IntegralSolve in Eigen) 
+(bool)			Use_LEFM					= 0				// Use Linear Elastic Fracture Mechanics (1) or Tensile/Compressive Strength (0) for breaking threshold of lattice
+(bool)			Use_UnbreakableOuterMesh	= 1				// The lattice of outer coarser mesh is set to be unbreakable
+(bool)			Use_CubicFlow				= 0				// 0: Assume fluid pressure is hydrostatic 1: or follow cubic flow rule  
+(bool)			Use_ReconnectLattice		= 1				// whether lattice reestablish when crack opening is negative
+(bool)			Use_RandomNode              = 1
+(bool) 			Use_RanLatStiffness			= 1				// Apply random stiffness accoding to strength distribution
+(bool)			DispControl					= 0				// For UTS only: 0: apply uniform pressure on surface , 1: apply uniform displacement on surface
+
+(bool)			Use_FrictionModel			= 0
+(bool)			Use_FullPlasticModel		= 1
+(bool) 			Use_RanLatStrength			= 1
+(bool) 			isTestCase 					= 0 
+
+(bool)			Use_OpenMP					= 1
+(bool)			Adj_ResForce				= 0				// The residual force becomes the applied force in next step calculation
+(bool)			Use_const_NodeNum			= 1				// To change l_min in order to meet the similar Node # of Dense model
+// Fixity Matrix
+(bool)			BoundaryMat					
+											= 1 , = 1 , = 1	, = 1 , = 1 , = 1			//Face 1	Bottom layer
+											= 1 , = 1 , = 1	, = 1 , = 1 , = 1			//Face 2	Bottom face
+											= 1 , = 1 , = 1	, = 1 , = 1 , = 1			//Face 3	Right face
+											= 1 , = 1 , = 1 , = 1 , = 1 , = 1			//Face 4	Up face
+											= 1 , = 1 , = 1 , = 1 , = 1 , = 1			//Face 5	Left face
+											= 1 , = 1 , = 1	, = 1 , = 1 , = 1			//Face 6	Top layer
+(double)		InitStress					= 0.0										//sigma_xx
+											= 0.0										//sigma_yy
+											= 0.0										//sigma_zz
+											= 0.0										//sigma_xy
+											= 0.0										//sigma_xz
+											= 0.0										//sigma_yz										
+(char*)			OutputFolder				=/home/john/output/HF/D50rr_0.3_r0.25_ln0.50#			//Folder that store output files, terminated by #
+(char*)			OutputSubFolder				=/home/john/Dropbox/output/HF/D50rr_0.3_r0.25_ln0.5/stat#		//Sub Folder that store statistics files
+(char*)			OutputFilePrefix			=#										//Prefix of all output files, terminated by #
+(char*)			RunTimeCommendFile			=./src/RunTimeCommend.txt#					//File for issuing run time command
+
+
+END OF FILE
