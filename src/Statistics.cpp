@@ -204,7 +204,7 @@ void Statistics::Fluid_pressure     (   FluidCal*               p_fCal,
         file << geo.dist(center,fNode[i]) << '\t' << std::max(fPressure[i],0.0) << '\t'
                 << lforce.getCrackOpening(fLatticeID[i]) << '\t'
                 << fStorageRate[i] << '\t'
-                << LatTab[fLatticeID[i]].area << '\n';
+                << LatTab[fLatticeID[i]].area << '\t';
         if (fPressure[i]>0.0) {
             double tStorage = lforce.getCrackOpening(fLatticeID[i])*LatTab[fLatticeID[i]].area;
             file << tStorage<< std::endl;

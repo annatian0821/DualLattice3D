@@ -32,7 +32,7 @@ void FluidNetwork::updateFluidNetwork					(	Vertices*				p_verti,
 	dualOut << "updating FluidNetwork..." << std::endl;
 	//To obtain the LatticeID of existing Fluid Node and Group 0 in ConnectLat and sort them. Extract the difference between two list
 	//which is the lattice to be added in the fluid network
-	std::vector<unsigned>	latGroup0 = p_conLat->getGroupActive(0,minApecture);
+/*	std::vector<unsigned>	latGroup0 = p_conLat->getGroupActive(0,minApecture);
 	std::cout <<  "latGroup0.size() = " << latGroup0.size() << std::endl;
 	std::vector<unsigned>	oldfList = getAllLatIDList();
 	std::vector<unsigned>	putLatList;
@@ -43,6 +43,31 @@ void FluidNetwork::updateFluidNetwork					(	Vertices*				p_verti,
 		    putFNode(putLatList[i],p_verti,p_conLat,time);
 		    cnt++;
 		}
+	}*/
+	std::vector<unsigned>   latGroup0 = p_conLat->getGroupActive(0,minApecture);
+	latGroup0.insert(latGroup0.end(),initCrackList.begin(),initCrackList.end());
+	uniqueVector(&latGroup0);
+	std::cout <<  "latGroup0.size() = " << latGroup0.size() << std::endl;
+	std::vector<unsigned>   oldfList = getActiveLatIDList();
+	std::vector<unsigned>   putLatList;
+	setDiffVector(latGroup0,oldfList,putLatList);
+	unsigned cnt = 0, fNodeID;
+	for (unsigned i=0; i<putLatList.size(); i++) {
+	    if (std::binary_search(latGroup0.begin(),latGroup0.end(),putLatList[i])) {
+	        if (std::find(inactiveLatID.begin(),inactiveLatID.end(),putLatList[i])==inactiveLatID.end()) {
+	            putFNode(putLatList[i],p_verti,p_conLat,time);
+	            cnt++;
+	        }
+	        else {
+	            if (setActiveFNode  (putLatList[i])) {
+	                fNodeID = std::find(latFNodeSet.begin(),latFNodeSet.end(),putLatList[i])->i2;
+	            }
+	        }
+	    } else {
+	        if (setInactiveFNode(putLatList[i])) {
+	            fNodeID = std::find(latFNodeSet.begin(),latFNodeSet.end(),putLatList[i])->i2;
+	        }
+	    }
 	}
 	connectedFNodeSet();
 	dualOut << "No of lattice becomes fluid nodes = " << cnt << " inActive fluid node in this step = " << putLatList.size()-cnt << std::endl;
@@ -124,10 +149,12 @@ std::vector<unsigned> FluidNetwork::getPriINodeNbList	()
 	unsigned fNodeID;
 	for (unsigned i=0; i<priINodeList.size(); i++) {
 		fNodeID = priINodeList[i].fNodeID;
+		dualOut << "fNodeList[fNodeID].nbActive[j].fNodeID...";
 		for (unsigned j=0; j< fNodeList[fNodeID].nbActive.size(); j++) {
-			if (std::find(priINodeList.begin(),priINodeList.end(),fNodeList[fNodeID].nbActive[j].fNodeID)==priINodeList.end()) {
+//			if (std::find(priINodeList.begin(),priINodeList.end(),fNodeList[fNodeID].nbActive[j].fNodeID)==priINodeList.end()) {
+		    dualOut << fNodeList[fNodeID].nbActive[j].fNodeID << std::endl;
 				nbPriINodeList.push_back(fNodeList[fNodeID].nbActive[j].fNodeID);
-			}
+//			}
 		}
 	}
 	uniqueVector(&nbPriINodeList);

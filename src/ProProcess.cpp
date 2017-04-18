@@ -108,6 +108,7 @@ double GLatForce::getCrackOpening	( 	const unsigned			LatticeID)
 	}
 	double aperture = sqrt(sum) - LatTab[LatticeID].length - LatTab[LatticeID].initOpening;
 	aperture = std::max(aperture,MinApecture);
+	return aperture;
 }
 
 std::array<double,DofPerNode> GLatForce::getResidual			(	const unsigned			NodeID)

@@ -5,17 +5,17 @@ ONLY parameter after equal sign is read
 
 All characters are skipped before #
 Dimensions of Model:
-(unsigned)		ProblemID					= 0				// 0 for UTS, 1 for hydraulic fracturing, 2 for well injection, 999 for testing (UTS), 9999 for testing (HF)
-(unsigned)		GeometryID					= 0				// 0: penny shape crack, 1: well, 2: double notch, 3: rough penny shape crack, 4: well with notch
-(int)			Nx 							= 50   			// in m
-(int)			Ny 							= 50
-(int)			Nz 							= 500
+(unsigned)		ProblemID					= 1				// 0 for UTS, 1 for hydraulic fracturing, 2 for well injection, 999 for testing (UTS), 9999 for testing (HF)
+(unsigned)		GeometryID					= 3				// 0: penny shape crack, 1: well, 2: double notch, 3: rough penny shape crack, 4: well with notch
+(int)			Nx 							= 10   			// in m
+(int)			Ny 							= 10
+(int)			Nz 							= 10
 
 
 (double)		UnitLength					= 10.0
 (double)		ScaleBoundary				= 1.0			//The scale factor for the size of coarser mesh (dictate size of outer boundaries
 (double)		ScaleOuterLength			= 1.0			//The scale factor to determine the coarseness of outer mesh
-(double)		CrackRadius					= 0.0			//The radius of crack relative to Inner length (Nx*UnitLength)
+(double)		CrackRadius					= 0.25			//The radius of crack relative to Inner length (Nx*UnitLength)
 (double) 		NormLatStiffness 			= 2.0e7         //Material stiffness ks
 (double)		ShearToAxialStiffnessRatio  = 1.0			//alpha is ks/kn, default is 1.0
 (double)		MomentToAxialStiffnessRatio = 1.0			//stiffness ratio of axial to flexural stiffness

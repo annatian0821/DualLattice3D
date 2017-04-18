@@ -23,23 +23,23 @@ Dimensions of Model:
 (double)		MicroAxialStrength[1] 		= -1.0e10		//contraction need to break a lattice (Compression)
 (double)		MicroShearStrength			= 8000.0
 (double)		Phi							= 30.0			//angle phi for MC criterion			
-(double)		StrengthFactor				= 10000.0			//Modification factor for strength
+(double)		StrengthFactor				= 1.0			//Modification factor for strength
 (double) 		BreakStress					= -1.0			//Max. principal stress to break a lattice
 (double)		MaxPressure					= 50000.0		//Max fluid pressure allowed (kPa)
-(double)		InjectRate					= 0.25			//Injection rate (m3/s)
-(double)		Viscosity					= 1e-7			//Viscosity of fluid, 1e-6 for water
+(double)		InjectRate					= 0.025			//Injection rate (m3/s)
+(double)		Viscosity					= 5e-6			//Viscosity of fluid, 1e-6 for water
 (double)		LeakOffCoeff				= 0e-3			//Leak Off coefficient
-(double)		TimePerStep					= 0.2				//For fluid calculation (s)
-(double)		InitTime					= 10			//Initial time  (s)
+(double)		TimePerStep					= 0.1			//For fluid calculation (s)
+(double)		InitTime					= 2				//Initial time  (s)
 
 (double)		PackingDensity				= 0.5			//Percent from most dense HCF packing 0.7405
 (double)		MinArea						= 0.0001		//Normalized min area of surface each lattice represent (actual area MinArea*D*D) L - 1.0 -> 0.002
-(double)		MinApecture					= 0				// Minimum aperture to define closure of crack
+(double)		MinApecture					= 1e-5			// Minimum aperture to define closure of crack
 
 (double)		LoadIncrFactor				= 1.2			//Determine the min. increment of loading, value > 1.0
 (double)		LoadDecrFactor				= 0.8			//Reduction of loading during relaxation, value < 1.0
 (double)		FluidFactor					= 0.8			//Fluid factor >0.0, related to sensitivity of fluid system
-(double)		InitForce					= 2500.0 		//Specify the initial pressure (kPa) or initial displacement
+(double)		InitForce					= 12000.0 		//Specify the initial pressure (kPa) or initial displacement
 
 (double)		ReConRatio					= 0.1			//Ratio applied to lattice stiffness for reconnected lattices
 (double)		PCG_Precision				= 0.00025		//Precision for Preconditioned Conjugate Gradient Solver
@@ -63,7 +63,7 @@ Dimensions of Model:
 (bool) 			Use_CompactStiffnessMatrix	= 1				// Assemble smaller stiffness matrix by dropping the restrained DOF (Only for using IntegralSolve in Eigen) 
 (bool)			Use_LEFM					= 0				// Use Linear Elastic Fracture Mechanics (1) or Tensile/Compressive Strength (0) for breaking threshold of lattice
 (bool)			Use_UnbreakableOuterMesh	= 1				// The lattice of outer coarser mesh is set to be unbreakable
-(bool)			Use_CubicFlow				= 0				// 0: Assume fluid pressure is hydrostatic 1: or follow cubic flow rule  
+(bool)			Use_CubicFlow				= 1				// 0: Assume fluid pressure is hydrostatic 1: or follow cubic flow rule  
 (bool)			Use_ReconnectLattice		= 1				// whether lattice reestablish when crack opening is negative
 (bool)			Use_RandomNode              = 1
 (bool) 			Use_RanLatStiffness			= 1				// Apply random stiffness accoding to strength distribution
@@ -91,8 +91,8 @@ Dimensions of Model:
 											= 0.0										//sigma_xy
 											= 0.0										//sigma_xz
 											= 0.0										//sigma_yz										
-(char*)			OutputFolder				=/home/john/output/HF/LN/D50rr_0.3_ln0.5#			//Folder that store output files, terminated by #
-(char*)			OutputSubFolder				=/home/john/Dropbox/output/HF/LN/D50rr_0.3_ln0.5/stat#		//Sub Folder that store statistics files
+(char*)			OutputFolder				=/home/john/output/HF/LN/D50rr_0.3_m5e-6_q0.025_r1#			//Folder that store output files, terminated by #
+(char*)			OutputSubFolder				=/home/john/Dropbox/output/HF/LN/D50rr_0.3_m5e-6_q0.025_r1/stat#		//Sub Folder that store statistics files
 (char*)			OutputFilePrefix			=#										//Prefix of all output files, terminated by #
 (char*)			RunTimeCommendFile			=./src/RunTimeCommend.txt#					//File for issuing run time command
 

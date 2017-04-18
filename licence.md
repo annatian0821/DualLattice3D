@@ -8,7 +8,7 @@ Written by Kam Wing Wong <civil.john@gmail.com>, <kwjw2@cam.ac.uk>, October 2013
  
  Declaration of Contributions
  
- This code is procduced for the implementation of 3D Hydraulic Fracturing simulation by Dual Lattice Model (DLM), a PhD project at
+ This code is procduced for the implementation of Hydraulic Fracturing simulation by Lattice Element Method (LEM), a PhD project at
  University of Cambridge funded by EPSRC Industry-CASE Award and HKIE Young Engineers Arthur and Louise May Memorial Scholarship.
  
  This code is sololy rewritten and tested by Kam Wing (John) Wong.

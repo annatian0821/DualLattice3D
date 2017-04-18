@@ -499,6 +499,7 @@ void Input::logConfig ()
     dualOut << " LeakOffCoeff = " << LeakOffCoeff << std::endl;
     dualOut << " Injection rate = " << InjectRate << std::endl;
     dualOut << " FluidFactor = "    << FluidFactor << std::endl;
+    dualOut << " MinApecture = "    << MinApecture << std::endl;
     dualOut << " TimeStep = "		<< TimePerStep << std::endl;
     dualOut << " InitTime = "		<< InitTime << std::endl;
     dualOut << " ------------------------" << std::endl;
@@ -650,6 +651,7 @@ void Input::logConfig ()
     file << " Fluid viscosity = " << Viscosity << std::endl;
     file << " LeakOffCoeff = " << LeakOffCoeff << std::endl;
     file << " Injection rate = " << InjectRate << std::endl;
+    file << " MinApecture = "    << MinApecture << std::endl;
     file << " TimeStep = "       << TimePerStep << std::endl;
     file << " InitTime = "       << InitTime << std::endl;
     file << " ------------------------" << std::endl;

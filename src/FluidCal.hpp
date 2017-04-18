@@ -51,11 +51,11 @@ public:
 /*	bool calculate_static					(	std::pair<bool,bool>& 			qStatus,
 												const unsigned					step);*/
 
-	bool updateCalInfo						(	std::pair<bool,bool>& 			qStatus);
+	bool checkGlobalConvergence				(   bool                            isMassBalanceOK);
 
 //	void updateUniformP                     (   const double                    pNew);
 
-	std::array<bool,2> updateQ              ();
+	std::array<bool,2> fillQ                ();
 
 	void setInitialArea                     (   ConnectLat*                     p_conLat);
 
@@ -64,6 +64,8 @@ public:
 	void setNotchList                       (   const std::vector<unsigned>*    p_latList);
 
 	bool interpolate_p                      ();
+
+	double  updateP_Old                     ();
 
 	std::vector<unsigned>   getLatID        ();
 
@@ -79,13 +81,15 @@ public:
 
     void                    updateRes       ();
 
-    void updatingPressureProfile            (    bool       isHydrostatic);
+    void updatingPressureProfile            (    bool       isUniformPressure);
 
-	double                  getPriInjP      ();
+	double                  updateP0        ();
 
     bool                    interpolate_pi  ();
 
     void                    setP0           (   double      pNew);
+
+    double                  getP0           ();
 
 	void                    fill_pList      (   double                          P);
 
@@ -136,7 +140,7 @@ private:
 	bool                        checkpMin;
 	bool                        checkpMax;
 	bool                        isBounded;
-	bool                        isFirstIter;
+	bool                        isFirstP0Iter;
 	std::array<PRpair,2> 		iterHist;
 	std::vector<unsigned>		DOFtoFNode;
 	std::vector<CustomPair<unsigned,double> >       notchList;
@@ -151,9 +155,9 @@ private:
 	SpMat						H;
 	std::vector<SpMat>			bH;
 
-	std::vector<IDpair> initialize			();
+	void initialize			                ();
 
-	void updatePriInjP                      (   double                          pNew);
+	void updateP0                           (   double                          pNew);
 
 	std::pair<bool,double> findPlimits	    ();
 

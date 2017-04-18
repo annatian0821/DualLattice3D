@@ -367,9 +367,8 @@ int hydraulicFracturing		(	Clock* 					p_gClock)
 	delete      p_pxCrackLatList;
 	p_conLat					-> setLogOffset(true);
 	p_loading					-> initLoad(InitForce,p_conLat);
-//	p_fCal                      -> applyConstFluidPressure(InitForce);
 	isStable = p_EigenPCG 		-> solve(totalStep,true,Use_CompactStiffnessMatrix);
-	p_stat						-> writeStress(&weakPlaneLatList,p_fCal->getPriInjP(),0,0.0);
+	p_stat						-> writeStress(&weakPlaneLatList,p_fCal->getP0(),0,0.0);
 
 	EnergyCal*       p_eCal = new EnergyCal();
 	unsigned rmLatAcc = 0;
@@ -475,7 +474,7 @@ int hydraulicFracturing		(	Clock* 					p_gClock)
 			isRunTimeStop = p_rtc->isStop();
 			p_rtc->update ();
 			relaxCheck = (SF_coupling_status[0] && (relaxStep < MaxRelaxStep) && (totalStep < MaxTotalStep)
-							&&(!isRunTimeStop)&&(SF_coupling_status[1]));
+							&&(!isRunTimeStop)&&(!SF_coupling_status[1]));
 		}
 		if (!SF_coupling_status[0]) {
 			p_output	-> writeAll (totalStep,1.0,p_fCal,p_conLat,p_verti,p_EigenPCG);
@@ -485,7 +484,6 @@ int hydraulicFracturing		(	Clock* 					p_gClock)
 		}
 		if (totalStep >= MaxTotalStep) {
 			dualOut << "No of step reaches the specified maximum, calculation stop!" << std::endl;
-//			p_fCal  -> updateCalInfo(qStatus);
 			runStatus = 3;
 			break;
 		}
@@ -510,7 +508,7 @@ int hydraulicFracturing		(	Clock* 					p_gClock)
 			if (((GeometryID==0)||(GeometryID==3))&&(CrackRadius>minR)) {
 			}
 			p_stat      -> writeStress(&weakPlaneLatList,p_conLat,1.0,timeStep,time);
-			p_stat      -> writeWeakPlaneStress (p_conLat,p_EigenPCG,&weakPlaneLatList,p_fCal->getPriInjP(),timeStep);
+			p_stat      -> writeWeakPlaneStress (p_conLat,p_EigenPCG,&weakPlaneLatList,p_fCal->getP0(),timeStep);
 			if (StrengthFactor<2.0) {
 			    p_fCal      -> printConnectivity(timeStep);
 			    p_stat      -> writeLatCluster   (p_conLat,100,timeStep);
@@ -561,8 +559,7 @@ std::array<bool,2> solidFluidCoupling			 (	ConnectLat*						p_conLat,
 {
 	static bool isFirst = true;
 	unsigned i = 0;
-//	static std::pair<bool,bool> 		qStatus(false,false);
-	std::array<bool,2>  out;
+	std::array<bool,2>  out { true , false} ;
 	static std::array<bool,2>  qStatus = {true,false};
 	if (p_rtc->isStop()) {
 	    out[0] = false;
@@ -586,68 +583,71 @@ std::array<bool,2> solidFluidCoupling			 (	ConnectLat*						p_conLat,
 	} else if (Use_FrictionModel) {
 	    p_glatRemoval   -> updateReConLatShearStiffness  (p_conLat,p_EigenPCG,p_verti,p_fCal->getTimeStep(),p_fCal->getTime());
 	}
-
+	if (true) {
 	if ((qStatus[1]==true)||(!Use_CubicFlow)) {
 	    std::vector<unsigned>   latList = p_fCal->getLatID();
-	    p_loading                   -> applyConstFluidPressure(latList,p_fCal->getPriInjP());
+	    p_loading                   -> applyConstFluidPressure(latList,p_fCal->getP0());
 	} else {
 	    p_loading                   -> applyFluidPressure(p_fCal,p_conLat);
 	}
-
-/*	if ((p_fCal->isPChange())&&(Use_CubicFlow)) {
-	    p_loading                   -> applyFluidPressure(p_fCal,p_conLat);
-	}*/
+	}
 	double isSolidStable   = p_EigenPCG         -> solve(p_fCal->getTimeStep(),true,Use_CompactStiffnessMatrix);
-	qStatus                = p_fCal             -> updateQ();
+	qStatus                = p_fCal             -> fillQ();
 	dualOut << "Q status : " << qStatus[0] << ' ' <<  qStatus[1] << std::endl;
-	if (qStatus[0]) {
-	    qStatus[0] = qStatus[1] = false;
-	    dualOut << " Mass balance achieve, proceed to next time step" << qStatus[0] << " convergence of Q = " << qStatus[1];
-	    p_fCal->initizeNextStep ();
-	    out[0]= true, out[1] = true;
-	    return out;
-	} else {
-	    out[1]= false;
+
+	bool is_overall_converge = p_fCal  -> checkGlobalConvergence (qStatus[0]);
+
+	if (false) {
+        if (is_overall_converge) {
+            qStatus[0] = qStatus[1] = false;
+            dualOut << " Mass balance achieve, proceed to next time step" << qStatus[0] << " convergence of Q = " << qStatus[1];
+            p_fCal -> initizeNextStep ();
+            out[0]= true; out[1] = true;
+            return out;
+        } else {
+            out[1]= false;
+        }
 	}
+/*
+    if ((qStatus[1]==true)||(!Use_CubicFlow)) {
+        std::vector<unsigned>   latList = p_fCal->getLatID();
+        p_loading                   -> applyConstFluidPressure(latList,p_fCal->getP0());
+    } else {
+        p_loading                   -> applyFluidPressure(p_fCal,p_conLat);
+    }
+*/
 
-/*	if (qStatus[0]) {
-	    p_fCal->initizeNextStep ();
-	    out[0]= true, out[1] = true;
-	    return true;
-	}*/
-
-	bool is_p_converge = false;
+	static bool is_p_converge = false;
 	if (Use_CubicFlow) {
 	    isFluidStable     = p_fCal     -> solve();
-	    is_p_converge      = p_fCal     -> interpolate_pi();
+
+	    is_p_converge     = p_fCal     -> interpolate_pi();
 	    if (is_p_converge) {
+
+	        if (is_overall_converge) {
+	            qStatus[0] = qStatus[1] = false;
+	            dualOut << " Mass balance achieve, proceed to next time step" << qStatus[0] << " convergence of Q = " << qStatus[1];
+	            p_fCal -> initizeNextStep ();
+	            out[0]= true; out[1] = true;
+	            return out;
+	        }
+
 	        p_fCal      -> interpolatingP0 ();
+
+	        p_fCal      -> updatingPressureProfile(true);
+	    } else {
+	        p_fCal      -> updatingPressureProfile(false);
+
 	    }
 	} else {
 	    p_fCal          ->  interpolatingP0 ();
-	    p_fCal          ->  updatingPressureProfile((!Use_CubicFlow)||(is_p_converge));
-	    qStatus[1] = true;
+	    p_fCal          ->  updatingPressureProfile(true);
 	    out[0]= true;
 	}
 
-//	p_fCal						    -> updateFluidNetwork(p_verti,p_conLat,time);
-/*	if (Use_CubicFlow) {
-	    fluidStatus.second = p_fCal -> calculate(qStatus,timeStep);
-	} else {
-	    fluidStatus.second = p_fCal	-> calculate_static(qStatus,timeStep);
-	}
-
-	if (!fluidStatus.second) {
-		tripOut << "[stableLatFluid] - Fluid model unstable, quit calculation" << std::endl;
-		return false;
-	}*/
-//	p_loading 					-> applyFluidPressure(p_fCal,p_conLat);
-
-//    fluidStatus.first  = p_fCal -> updateCalInfo(qStatus);
+	out[1]= false;
 
     p_rtc->update ();
-//    isStable = p_EigenPCG 		-> solve(timeStep,true,Use_CompactStiffnessMatrix);
-//    p_fCal -> updateRes();
     if (!isSolidStable) {
         tripOut << "Solid Lattice model unstable, quit calculation" << std::endl;
         out[0]= false;

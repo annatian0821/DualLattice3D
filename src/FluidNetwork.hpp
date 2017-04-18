@@ -108,7 +108,7 @@ protected:
 		unsigned                        LatticeID;
 		Point							centroid;
 		double							old_p;
-		double                          current_p;
+		double                          now_p;
 		double                          new_p;
 		double                          Cl;
 		double                          t_exp;

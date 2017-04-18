@@ -79,13 +79,8 @@ bool FluidCal::solve		    ()
 	dualOut << "Start calculation of fluid pressure..." << " time = " << time << '\n';
 	Clock clock;
 	clock.start("Fluid");
-//	bool isFluidNetworkChanged = true;
-//	unsigned fCalStep = 0;
-//	dualOut << "--------fCalStep = " << fCalStep << " starts--------" << '\n';
-//	qStatus = fillQ(initialize());
-	maxIncrInUse = maxIncrBase;
 	maxDecrInUse = maxDecrBase;
-	double p0 = this->getPriInjP();
+//	double p0 = this->p0();
 	if ((calNodeNum==0)||(!fillH())) {
 	    dualOut << "Only injection node is active, solving is not required, pressure is set to 0.0" << '\n';
 	    p.fill(0.0);
@@ -103,28 +98,17 @@ bool FluidCal::solve		    ()
 	            if (!status.second) {
 	                tripOut << "Calculation unstable, reset to hydrostatic pressure and start again";
 	                return false;
+	            }
 	        }
 	    }
-/*	        else {
-	        status.second = serialSolve(minIter,maxIter,PCG_Precision);
-	        dualOut << "PCG residual = " << getResidual() << '\n';
-	        if (!status.second) {
-	            tripOut << "PCG is not stable, try to solve by Cholesky..." << '\n';
-	            status.second = sparseCholeskySolve ();
-	            dualOut << "Cholesky residual = " << getResidual() << '\n';
-	            if (!status.second) {
-	                return false;
-	            }
-	        }*/
-	    }
 	}
-//	fCalStep++;
-	status.second = !(!(p0!=p0)||(p0>Huge));
-//	bool is_pConverge = calNewp();
-//	qStatus.second = (is_pConverge);
-//	isInjPChange = false;
-	dualOut << "--------fluid calculation finished" << '\n';
-//	dualOut << "Fluid calculation completed..." << '\n';
+/*	dualOut << "---------current p q profile-----------" << std::endl;
+	for (unsigned DOF=0 ; DOF < calNodeNum ; DOF++) {
+	    dualOut << "(" << p[DOF] << ',' << q[DOF] <<  ") " << std::endl;
+	}*/
+	dualOut << std::endl;
+//	status.second = !(!(p0!=p0)||(p0>Huge));
+//	dualOut << "--------fluid calculation finished" << '\n';
 	clock.get();
 	return true;
 }
@@ -152,34 +136,27 @@ bool FluidCal::calculate_static		(	std::pair<bool,bool>& 	qStatus,
 }
 */
 
-/*
-bool FluidCal::updateCalInfo	(	std::pair<bool,bool>& 		qStatus)
+
+bool FluidCal::checkGlobalConvergence	(   bool isMassBalanceOK )
 {
-	static unsigned convergeCnt = 0;
-	static bool		isQbounded = false;
-	static unsigned relaxStep = 0;
-	if (qStatus.second) {
-        dualOut << "p0 = " << p0 << " pMax-pMin = " << pMax-pMin << " pMax = " << pMax << " pMin = " << pMin << std::endl;
-        if ((qStatus.first)) {
-            dualOut << "Global flow rate convergence achieved, proceed to next time step" << '\n';
-            initizeNextStep(convergeCnt,relaxStep,isQbounded);
-            isInjPChange = true;
-            relaxStep = 0;
-            return true;
-        } else if (((pMax-pMin)/p0<1e-3)) {
-            dualOut << "Pressure difference is small, proceed to next time step" << '\n';
-            initizeNextStep(convergeCnt,relaxStep,isQbounded);
-            isInjPChange = true;
-            relaxStep = 0;
-            return true;
-        }
-        this ->updateOldP_static(updatePriInjPressure());
-        dualOut << "Injection pressure updated" << std::endl;
+	double  p0 = this->getP0();
+	dualOut << "updateCalInfo..." << std::endl;
+	dualOut << "p0 = " << p0 << " pMax-pMin = " << pMax-pMin << " pMax = " << pMax << " pMin = " << pMin << std::endl;
+	if (isMassBalanceOK) {
+	    dualOut << "Global flow rate convergence achieved, proceed to next time step" << '\n';
+	    initizeNextStep();
+	    isInjPChange = true;
+	    return true;
+	} else if (((pMax-pMin)/p0<1e-3)) {
+	    dualOut << "Pressure difference is small, proceed to next time step" << '\n';
+	    initizeNextStep();
+	    isInjPChange = true;
+	    return true;
 	}
-	relaxStep++;
+	this ->updateOldP_static(this->getP0());
+	dualOut << "Injection pressure updated" << std::endl;
 	return false;
 }
-*/
 
 /*
 void FluidCal::set_newP_lastStep () {
@@ -207,13 +184,13 @@ void FluidCal::initizeNextStep	()
 	             << 1.0 << '\t'<< 1.0 << 0.0 << 1.0 << '\n';
 	    isFirst = false;
 	}
-	file << time << '\t' << getPriInjP() << '\t' << fNodeList.size() - old_fNodeNum << '\t'
+	file << time << '\t' << this->getP0() << '\t' << fNodeList.size() - old_fNodeNum << '\t'
 	        << ((int) calNodeNum) - old_activefNodeNum << '\t' << calNodeNum << '\t' << fNodeList.size() << '\t'
 	        << ((double) calNodeNum+1)/fNodeList.size()<< '\t'<< fluidEfficieny  << '\n';
 	dualOut << " Current time = " << time << " timeStep = " << timeStep << std::endl;
 	time += timeStep;
 	dualOut << " Current time new = " << time << " timeStep = " << timeStep << std::endl;
-	double p0 = this->getPriInjP();
+	double p0 = this->getP0();
 	pMin = p0;
 	pMax = p0*(time+timeStep)/time;
 	isBounded = false;
@@ -229,27 +206,25 @@ void FluidCal::initizeNextStep	()
 	    oldTotalArea *= 2.0;
 	}
 //	convergeCnt++;
-//	p0 = getPriInjP();
+//	p0 = p0();
 //	set_newP_lastStep();
 //	isQbounded = false;
 	isFirstStep = false;
-	isFirstIter = true;
+	isFirstP0Iter = true;
 //	relaxStep = 0;
 }
 
-/*
-double FluidCal::UpdateInjPressureHist       (   const double        pNow)
+double FluidCal::updateP_Old ()
 {
-    if (normRes>0.0) {
-        pMin = pNow;
-        iterHist[0] = PRpair(pMin,normRes);
-        tripOut << "Set pMin = pNow = " << pMin << '\n';
-    } else {
-        pMax = pNow;
-        iterHist[1] = PRpair(pMax,normRes);
-        tripOut << "Set pMax = pNew = " << pMax << '\n';
+    double p0 = this->getP0();
+    for (unsigned fNodeID = 0; fNodeID < fNodeList.size(); fNodeID++) {
+        fNodeList[fNodeID].old_p = p0;
     }
-}*/
+
+    for (unsigned fNodeID = 0; fNodeID < fNodeList.size(); fNodeID++) {
+        fNodeList[fNodeID].old_p = fNodeList[fNodeID].new_p;
+    }
+}
 
 double FluidCal::getActiveTotalArea ()
 {
@@ -347,16 +322,16 @@ std::pair<bool,double> FluidCal::findPlimits	()
 
             iterHist[0] = PRpair(pMin,normRes);
             tripOut << "pMin is captured, now try to capture pMax" << '\n';
-            pMin = getPriInjP();
+            pMin = getP0();
             if (normRes<1.0) {
                 pMax = std::min(std::min(pMin/(1.0-normRes)*adjRatio,maxIncrInUse*pMin),pMaxAbs);
             } else {
                 pMax = maxIncrInUse*pMin;
             }
             out.first = false;
-            out.second = pMin;
+            out.second = pMax;
         } else {
-            pMin = getPriInjP();
+            pMin = getP0();
             if (std::fabs(pMin-pMinAbs)<Tiny) {
                 time +=timeStep;
                 tripOut << "pMin is too large but cannot be further reduced as it reaches pMinAbs already,increase the time by one timeStep "
@@ -456,112 +431,111 @@ double FluidCal::update_p_bounds                       (   const double        p
     return (pMin+pMax)/2.0;
 }*/
 
-
-std::array<bool,2> FluidCal::updateQ					()
+std::array<bool,2> FluidCal::fillQ                  ()
 {
-	//Storage of primary injection nodes which are excluded in solving system of equations
-	this->initialize();
-	if (priINodeList.empty()) {
-		tripOut << "---WARNING---No injection node!!!" << '\n';
-	}
-	const std::vector<IDpair> qinList = this->initialize();
-	q.resize(calNodeNum);
-	q.fill(0.0);
-	l.resize(calNodeNum);
-	l.fill(0.0);
-	unsigned LatticeID;
-	double sum_qin = 0.0;
-	double sum_s = 0.0;
-	double sum_l = 0.0;
-//	double p0 = getPriInjP();
-	static double oldDeltaQ = Huge;
+    //Storage of primary injection nodes which are excluded in solving system of equations
+    dualOut << "Filling q vector ....." << std::endl;
+    if (priINodeList.empty()) {
+        tripOut << "---WARNING---No injection node!!!" << '\n';
+    }
+    this->initialize();
 
-	GLatForce lforce;
-	for (std::vector<PriINode>::iterator it=priINodeList.begin(); it!=priINodeList.end(); ++it) {
-		LatticeID = fNodeList[it->fNodeID].LatticeID;
-		sum_qin += it->qin;
-		double s;
-		if (!std::binary_search(initCrackList.begin(),initCrackList.end(),LatticeID)) {
-		    s = std::max(lforce.getCrackOpening(LatticeID),0.0)*LatTab[LatticeID].area;
-		} else {
-		    s = 0.0;
-		}
-		sum_s += -s/time;
-	}
-	std::vector<double>		apertureList;
-	dualOut << "----------print q vector--------" << std::endl;
-	double avgAperture = 0.0;
-	for (unsigned DOF=0; DOF<calNodeNum; DOF++) {
-	    LatticeID = fNodeList[DOFtoFNode[DOF]].LatticeID;
-	    double aperture = std::max(lforce.getCrackOpening(LatticeID),0.0);
-	    apertureList.push_back(aperture);
-	    avgAperture += aperture;
-	}
+    q.resize(calNodeNum);
+    q.fill(0.0);
+    l.resize(calNodeNum);
+    l.fill(0.0);
+    unsigned LatticeID;
+    double sum_qin = 0.0;
+    double sum_s = 0.0;
+    double sum_l = 0.0;
+    static double oldDeltaQ = Huge;
 
-	avgAperture /= calNodeNum;
-	for (unsigned DOF=0; DOF<calNodeNum; DOF++) {
-		LatticeID = fNodeList[DOFtoFNode[DOF]].LatticeID;
-		double s=0.0,leak=0.0;
-		    if (fNodeList[DOFtoFNode[DOF]].old_p>Tiny) {
-		            s = apertureList[DOF]*LatTab[LatticeID].area;
-		            leak = getDeltaLeakOff(DOFtoFNode[DOF]);
-		    }
-		    if (GeometryID ==4) {
-		        unsigned i = std::lower_bound(notchList.begin(),notchList.end(),LatticeID)-notchList.begin();
-		        if (notchList[i]==LatticeID) {
-		            sum_s -= -notchList[i].i2/time;
-		        }
-		    }
-		q[DOF] = -(s+leak)/time;
-		l[DOF] = -leak/time;
-		sum_s += -s/time;
-		sum_l += -leak/time;
-	}
+    GLatForce lforce;
+    for (std::vector<PriINode>::iterator it=priINodeList.begin(); it!=priINodeList.end(); ++it) {
+        LatticeID = fNodeList[it->fNodeID].LatticeID;
+        sum_qin += it->qin;
+        double s;
+        if (!std::binary_search(initCrackList.begin(),initCrackList.end(),LatticeID)) {
+            s = std::max(lforce.getCrackOpening(LatticeID),0.0)*LatTab[LatticeID].area;
+        } else {
+            s = 0.0;
+        }
+        sum_s += -s/time;
+    }
+/*
+    for (unsigned i=0; i<iNodeList.size(); i++) {
+        q[fNodeToDOF[iNodeList[i].fNodeID]] += InjectRate;
+    }*/
 
-	double bHstorage = -getBHstorage();
-	double newDeltaLeakOff = -getDeltaLeakOff();
-	double leakOff = -getTotalLeakOff();
-	double rate_leakOff = (newDeltaLeakOff+leakOff)/time;
-	double rate_BHstorage = bHstorage/time;
-	for (unsigned i=0; i< qinList.size(); i++) {
-		sum_qin +=iNodeList[qinList[i].first].qin;
-	}
-	double deltaQ	= sum_s+rate_BHstorage+sum_qin+sum_l;
-	oldDeltaQ = deltaQ;
-	std::array<bool,2>    qStatus;
-	qStatus[1] = ((std::fabs(deltaQ)<1e-3)&&(!isInjPChange));
-	static double oldSum_s = 0.0;
-	static double oldSum_l = 0.0;
-//	oldSum_s = sum_s;
-//	oldSum_l = sum_l;
-	for (unsigned i=0; i< qinList.size(); i++) {
-		q[fNodeToDOF[qinList[i].second]] += iNodeList[qinList[i].first].qin;
-		sum_qin +=iNodeList[qinList[i].first].qin;
-	}
-	dualOut << "sum_s, sum_qin, rate_leakOff, rate_BHstorage = "
-	        << sum_s << "," << sum_qin << ' ' << rate_leakOff << ' ' << rate_BHstorage << '\n';
-	if (sum_qin+rate_leakOff<0.0) {
-	    dualOut << "Leak off is too large, increase time by one timeStep" << std::endl;
-	    time += timeStep;
-	    qStatus[0] = true;
-	    return qStatus;
-	}
-	normRes = (sum_s+rate_BHstorage+sum_qin+sum_l)/
-	        (std::fabs(sum_qin)+std::fabs(sum_l)+std::abs(sum_s)+std::abs(rate_BHstorage));
-	dualOut << "normRes = (sum_s+sum_qin+rate_leakOff)/(|sum_qin|+|rate_leakOff|+|sum_s|) = " << normRes << '\n';
-	fluidEfficieny = -(sum_s+rate_BHstorage)/(sum_qin);
-	dualOut << "Fluid efficiency = " << fluidEfficieny << std::endl;
-	oldBHstorage = bHstorage;
-	if (std::fabs(normRes)<q_tolerance) {
-		qStatus[0] = true;
-		return qStatus;
-	} else {
-		qStatus[0] = false;
-		return qStatus;
-	}
+    std::vector<double>     apertureList;
+    double avgAperture = 0.0;
+    for (unsigned DOF=0; DOF<calNodeNum; DOF++) {
+        LatticeID = fNodeList[DOFtoFNode[DOF]].LatticeID;
+        double aperture = std::max(lforce.getCrackOpening(LatticeID),0.0);
+        apertureList.push_back(aperture);
+        avgAperture += aperture;
+    }
+
+    avgAperture /= calNodeNum;
+//    dualOut << "---------initial q ---------" << std::endl;
+    for (unsigned DOF=0; DOF<calNodeNum; DOF++) {
+        LatticeID = fNodeList[DOFtoFNode[DOF]].LatticeID;
+        double s=0.0,leak=0.0;
+            if (fNodeList[DOFtoFNode[DOF]].old_p>Tiny) {
+                    s = apertureList[DOF]*LatTab[LatticeID].area;
+                    leak = getDeltaLeakOff(DOFtoFNode[DOF]);
+            }
+            if (GeometryID ==4) {
+                unsigned i = std::lower_bound(notchList.begin(),notchList.end(),LatticeID)-notchList.begin();
+                if (notchList[i]==LatticeID) {
+                    sum_s -= -notchList[i].i2/time;
+                }
+            }
+        q[DOF] = -(s+leak)/time;
+        l[DOF] = -leak/time;
+        sum_s += -s/time;
+        sum_l += -leak/time;
+//        dualOut << q[DOF] << ' ';
+    }
+    dualOut << std::endl;
+
+    double bHstorage = -getBHstorage();
+    double newDeltaLeakOff = -getDeltaLeakOff();
+    double leakOff = -getTotalLeakOff();
+    double rate_leakOff = (newDeltaLeakOff+leakOff)/time;
+    double rate_BHstorage = bHstorage/time;
+    dualOut << "iNodeList[qinList[i].first].qin" << std::endl;
+    double deltaQ   = sum_s+rate_BHstorage+sum_qin+sum_l;
+    oldDeltaQ = deltaQ;
+    std::array<bool,2>    qStatus;
+    qStatus[1] = ((std::fabs(deltaQ)<1e-3)&&(!isInjPChange));
+    static double oldSum_s = 0.0;
+    static double oldSum_l = 0.0;
+    dualOut << "sum_s, sum_qin, rate_leakOff, rate_BHstorage = "
+            << sum_s << "," << InjectRate << ' ' << rate_leakOff << ' ' << rate_BHstorage << '\n';
+    if (sum_qin+rate_leakOff<0.0) {
+        dualOut << "Leak off is too large, increase time by one timeStep" << std::endl;
+        time += timeStep;
+        qStatus[0] = true;
+        return qStatus;
+    }
+    normRes = (sum_s+rate_BHstorage+sum_qin+sum_l)/
+            (std::fabs(sum_qin)+std::fabs(sum_l)+std::abs(sum_s)+std::abs(rate_BHstorage));
+    dualOut << "normRes = (sum_s+sum_qin+rate_leakOff)/(|sum_qin|+|rate_leakOff|+|sum_s|) = " << normRes << '\n';
+    fluidEfficieny = -(sum_s+rate_BHstorage)/(sum_qin);
+    dualOut << "Fluid efficiency = " << fluidEfficieny << std::endl;
+    oldBHstorage = bHstorage;
+    if (std::fabs(normRes)<q_tolerance) {
+        qStatus[0] = true;
+        return qStatus;
+    } else {
+        qStatus[0] = false;
+        return qStatus;
+    }
 }
 
-void FluidCal::updateRes                    ()
+
+/*void FluidCal::updateRes                    ()
 {
     std::vector<IDpair>      qinList = initialize();
     dualOut << " Updating normRes..." << std::endl;
@@ -595,7 +569,7 @@ void FluidCal::updateRes                    ()
         avgAperture += aperture;
     }
     avgAperture /= calNodeNum;
-    double   p0 = this->getPriInjP();
+    double   p0 = this->getP0();
     static unsigned step = 0;
     char fileName[255];
     sprintf(fileName,"%s/%spProf%04d.vtk",OutputSubFolder,OutputFilePrefix,step);
@@ -661,7 +635,7 @@ void FluidCal::updateRes                    ()
     dualOut << "Fluid efficiency = " << fluidEfficieny << std::endl;
 //    oldDeltaLeakOff = newDeltaLeakOff;
     oldBHstorage = bHstorage;
-}
+}*/
 
 double FluidCal::getTotalLeakOff ()
 {
@@ -738,7 +712,7 @@ void FluidCal::setP0 (double P)
 
 void FluidCal::updateOldp () {
     for (unsigned i=0; i<priINodeList.size(); i++) {
-        fNodeList[priINodeList[i].fNodeID].new_p = this->getPriInjP();
+        fNodeList[priINodeList[i].fNodeID].new_p = this->getP0();
     }
     for (unsigned DOF = 0; DOF < calNodeNum; DOF++) {
         fNodeList[DOFtoFNode[DOF]].old_p = p[DOF];
@@ -769,36 +743,44 @@ void FluidCal::updateOldP_static (const double        pNew)
 
 bool FluidCal::interpolate_pi ()
 {
-    static double old_global_alpha = 0.5;
-    int cnt = 0;
     dualOut << "Interpolating new pressure profile..." << std::endl;
     double min_gamma = 0.1;
-    unsigned minCnt = (std::sqrt(fNodeList.size()));
-    for (unsigned fNodeID = 0; fNodeID < fNodeList.size(); fNodeID++) {
-        fNodeList[fNodeID].current_p = 0.0;
+    unsigned minCnt = std::sqrt(fNodeList.size());
+    double p0 = this->getP0();
+
+   for (unsigned fNodeID = 0; fNodeID < fNodeList.size(); fNodeID++) {
+        fNodeList[fNodeID].now_p =p0;
     }
+
+
     unsigned activeNodeNum = 0;
+    double minP = this->getP0()/500;
+ //   dualOut << "fNodeList[fNodeID].now_p " << std::endl;
     for (unsigned DOF=0; DOF<calNodeNum; DOF++) {
         unsigned fNodeID = DOFtoFNode[DOF];
-        fNodeList[fNodeID].current_p = std::max(p[DOF],0.0);
-        if (fNodeList[fNodeID].current_p>Tiny) {
+        fNodeList[fNodeID].now_p = std::max(p[DOF],minP);
+ //       dualOut << " ( " << p[DOF] << ',' << fNodeList[fNodeID].now_p << " ) ";
+        if (fNodeList[fNodeID].now_p>Tiny) {
             activeNodeNum++;
         }
     }
     dualOut << " activeNodeNum = " << activeNodeNum << std::endl;
     dualOut << std::endl;
-    for (std::vector<PriINode>::iterator it=priINodeList.begin(); it!=priINodeList.end(); ++it) {
-        fNodeList[it->fNodeID].new_p = fNodeList[it->fNodeID].current_p
-                = fNodeList[it->fNodeID].old_p = getPriInjP();
-    }
+
     double global_alpha = 0.0;
-    double p0 = this->getPriInjP();
+    unsigned cnt = 0;
+    dualOut << "deltaP = ";
     for (unsigned fNodeID=0; fNodeID<fNodeList.size(); fNodeID++) {
-        double deltaP = std::fabs(fNodeList[fNodeID].current_p - fNodeList[fNodeID].old_p)/p0;
-            global_alpha += deltaP;
+        double deltaP = std::fabs(fNodeList[fNodeID].now_p - fNodeList[fNodeID].old_p)/p0;
+            if (deltaP >p_tolerance) {
+                global_alpha += deltaP;
+                cnt++;
+            }
     }
+
     if (cnt<minCnt) {
-        cnt = minCnt;
+        dualOut << "Local converges " << std::endl;
+        return true;
     }
     global_alpha /= (cnt+1);
     sensitiveFactor = baseSensitiveFactor;
@@ -812,49 +794,39 @@ bool FluidCal::interpolate_pi ()
             sensitiveFactor = 0.0;
         }
     }
-    dualOut << " global alpha = " << global_alpha ;
-    dualOut     << " old global alpha " << old_global_alpha << std::endl
+    dualOut << " global alpha = " << global_alpha
             << " sensitive factor = " << sensitiveFactor << std::endl;
-    dualOut << " display pressure profile" << std::endl;
-    dualOut << "current_p , old_p , alpha , beta" << std::endl;
-    for (unsigned fNodeID = 0; fNodeID < fNodeList.size(); fNodeID++) {
-        double deltaP = std::fabs(fNodeList[fNodeID].current_p - fNodeList[fNodeID].old_p)/
-                (fNodeList[fNodeID].current_p + fNodeList[fNodeID].old_p);
-        double alpha = 0;
-        double beta = 1;
-        if (deltaP < 10*p_tolerance) {
-            fNodeList[fNodeID].new_p = fNodeList[fNodeID].current_p;
+//    dualOut << " display pressure profile" << std::endl;
+//    dualOut << "new_p , current_p , old_p , alpha , beta" << std::endl;
+    for (unsigned DOF = 0; DOF < calNodeNum; DOF++) {
+        unsigned fNodeID = DOFtoFNode[DOF];
+        double deltaP;
+        if (std::fabs(fNodeList[fNodeID].now_p + fNodeList[fNodeID].old_p) < Tiny) {
+            deltaP = 0.0;
         } else {
-            double alpha = deltaP;
-            double beta = (1-min_gamma)*std::pow((1-alpha),sensitiveFactor)+min_gamma;
-          fNodeList[fNodeID].new_p = std::max(fNodeList[fNodeID].current_p*beta + (1-beta)*fNodeList[fNodeID].old_p,0.0);
-          if (false) {
-              dualOut << fNodeList[fNodeID].new_p << ' ' << fNodeList[fNodeID].current_p << ' ' << fNodeList[fNodeID].old_p << ' '
-                      << alpha << ' ' << beta << std::endl;
-          }
-       }
-       dualOut << fNodeList[fNodeID].current_p << ' ' << fNodeList[fNodeID].old_p << ' ' << alpha << ' ' << beta << std::endl;
-    }
-    for (unsigned fNodeID = 0; fNodeID < fNodeList.size(); fNodeID++) {
-        fNodeList[fNodeID].old_p = fNodeList[fNodeID].new_p;
-    }
-    old_global_alpha = global_alpha;
-    bool isConverge = (global_alpha < p_tolerance);
-
-    if (isConverge) {
-        dualOut << "Global converges " << std::endl;
-    }
-    if ((cnt<minCnt)&&(!isConverge)) {
-        dualOut << "Local converges " << std::endl;
-        for (unsigned fNodeID = 0; fNodeID < fNodeList.size(); fNodeID++) {
-            fNodeList[fNodeID].old_p = fNodeList[fNodeID].new_p;
-            isConverge = true;
+            deltaP = std::fabs(fNodeList[fNodeID].now_p - fNodeList[fNodeID].old_p)/
+                        (fNodeList[fNodeID].now_p + fNodeList[fNodeID].old_p);
         }
+        double alpha = 0.0;
+        double beta = 0.0;
+        if (deltaP < Tiny) {
+            fNodeList[fNodeID].new_p = (1-min_gamma)*fNodeList[fNodeID].now_p;
+        } else {
+            alpha = deltaP;
+            beta = (1-min_gamma)*std::pow((1-alpha),sensitiveFactor)+min_gamma;
+            fNodeList[fNodeID].new_p = std::max(fNodeList[fNodeID].now_p*beta + (1-beta)*fNodeList[fNodeID].old_p,0.0);
+       }
+//       dualOut << fNodeList[fNodeID].new_p << ' ' << fNodeList[fNodeID].now_p << ' ' << fNodeList[fNodeID].old_p << ' ' << alpha << ' ' << beta << std::endl;
     }
-    return (isConverge);
+
+    if (global_alpha < p_tolerance) {
+        dualOut << "Global converges " << std::endl;
+        return true;
+    }
+    return false;
 }
 
-bool FluidCal::calNewp_static()
+bool FluidCal::calNewp_static ()
 {
     static double old_alpha = 0.5;
     double current_alpha;
@@ -885,57 +857,59 @@ void FluidCal::updateUniformP 	(	const double		pNew)
     }
 }
 */
-std::vector<IDpair> FluidCal::initialize	()
+void FluidCal::initialize	()
 {
-	DOFtoFNode.clear();
-	dualFNode.clear();
-	std::vector<unsigned>	nbPriINodeList = getPriINodeNbList();
-	nbPriNum = nbPriINodeList.size();
-	unsigned fNodeID;
-	for (unsigned i=0; i<nbPriNum; i++) {
-		fNodeID = nbPriINodeList[i];
-		if (conFNode.find(fNodeID)!=conFNode.end()) {
-			DOFtoFNode.push_back(fNodeID);
-		}
-	}
-	DOFseg1 = DOFtoFNode.size();
-	std::vector<unsigned>	chkList = DOFtoFNode;
-	for (unsigned i=0; i<priINodeList.size(); i++) {
-		chkList.push_back(priINodeList[i].fNodeID);
-	}
-	std::vector<IDpair>	qinList;
-	for (unsigned i=0; i<iNodeList.size(); i++) {
-		fNodeID = iNodeList[i].fNodeID;
-		if (conFNode.find(fNodeID)!=conFNode.end()) {
-			IDpair	iNodeAndfNodeID (i,fNodeID);
-			qinList.push_back(iNodeAndfNodeID);
-			if (std::find(chkList.begin(),chkList.end(),fNodeID)==chkList.end()) {
-				DOFtoFNode.push_back(fNodeID);
-			} else {
-				dualFNode.push_back(fNodeID);
-			}
-		}
-	}
-	DOFseg2 = DOFtoFNode.size();
-	chkList.insert(chkList.end(),DOFtoFNode.begin()+DOFseg1,DOFtoFNode.end());
-	for (std::set<unsigned>::iterator it = conFNode.begin(); it != conFNode.end(); ++it) {
-		fNodeID = *it;
-			if(std::find(chkList.begin(),chkList.end(),*it)==chkList.end()) {
-			DOFtoFNode.push_back(fNodeID);
-		}
-	}
-	calNodeNum = DOFtoFNode.size();
-	fNodeToDOF.resize(fNodeList.size(),calNodeNum);
-	for (unsigned DOF=0; DOF<DOFtoFNode.size();DOF++) {
-		fNodeToDOF[DOFtoFNode[DOF]]=DOF;
-	}
-	return qinList;
+
+    DOFtoFNode.clear();
+    dualFNode.clear();
+    std::vector<unsigned>   nbPriINodeList = getPriINodeNbList();
+    nbPriNum = nbPriINodeList.size();
+    unsigned fNodeID;
+    for (unsigned i=0; i<nbPriNum; i++) {
+        fNodeID = nbPriINodeList[i];
+        if (conFNode.find(fNodeID)!=conFNode.end()) {
+            DOFtoFNode.push_back(fNodeID);
+        }
+    }
+    dualOut << "---------------------"<< std::endl;
+    DOFseg1 = DOFtoFNode.size();
+
+    std::vector<unsigned>   chkList = DOFtoFNode;
+    for (unsigned i=0; i<priINodeList.size(); i++) {
+        chkList.push_back(priINodeList[i].fNodeID);
+    }
+    for (unsigned i=0; i<iNodeList.size(); i++) {
+        fNodeID = iNodeList[i].fNodeID;
+        if (conFNode.find(fNodeID)!=conFNode.end()) {
+            if (std::find(chkList.begin(),chkList.end(),fNodeID)==chkList.end()) {
+                DOFtoFNode.push_back(fNodeID);
+            } else {
+                dualFNode.push_back(fNodeID);
+            }
+        }
+    }
+
+    DOFseg2 = DOFtoFNode.size();
+    chkList.insert(chkList.end(),DOFtoFNode.begin()+DOFseg1,DOFtoFNode.end());
+    for (std::set<unsigned>::iterator it = conFNode.begin(); it != conFNode.end(); ++it) {
+        fNodeID = *it;
+        if(std::find(chkList.begin(),chkList.end(),*it)==chkList.end()) {
+            DOFtoFNode.push_back(fNodeID);
+        }
+    }
+    calNodeNum = DOFtoFNode.size();
+    dualOut << "calNodeNum = " << calNodeNum << '\n';
+    fNodeToDOF.resize(fNodeList.size(),calNodeNum);
+    for (unsigned DOF=0; DOF<DOFtoFNode.size();DOF++) {
+        fNodeToDOF[DOFtoFNode[DOF]]=DOF;
+    }
 }
 
 void FluidCal::interpolatingP0					()
 {
 	dualOut << "Updating primary injection pressure ..." << '\n';
-	double pNew;
+	double pNew = 0.0;
+	double pNow = this->getP0();
 	if (!isBounded) {
 	    std::pair<bool,double>  out;
 	    out = findPlimits ();
@@ -943,29 +917,39 @@ void FluidCal::interpolatingP0					()
 	    pNew = out.second;
 	    dualOut << " Bounds updated " << "isBounded " << isBounded << std::endl;
 	} else {
-	    double pNew = getP0SecondOrderInterpolate(this->getPriInjP(),normRes);
-//	    p0 = pOutput
-//	    oldInjP = pNew;
+	    pNew = getP0SecondOrderInterpolate(this->getP0(),normRes);
 	    dualOut << " Interpolation complete" << std::endl;
 	}
-	this->updatePriInjP(pNew);
+    pNew = std::max(std::min(pNew,pNow*LoadIncrFactor),pNow*LoadDecrFactor);
+	dualOut << "P0 = " << pNow << " pNew = " << pNew << std::endl;
+	this->updateP0(pNew);
 }
 
-void FluidCal::updatingPressureProfile (    bool       isHydrostatic)
+void FluidCal::updatingPressureProfile (    bool       isUniformPressure)
 {
-    double p0 = this->getPriInjP();
-    for (unsigned fNodeID = 0; fNodeID < fNodeList.size(); fNodeID++) {
-        fNodeList[fNodeID].new_p = p0;
-    }
-    if (isHydrostatic) {
-        return;
+    double pNew = this->getP0();
+
+    if (isUniformPressure) {
+    for (unsigned DOF = 0; DOF < calNodeNum; DOF++) {
+        fNodeList[DOFtoFNode[DOF]].new_p = fNodeList[DOFtoFNode[DOF]].old_p = pNew;
+//        fNodeList[DOFtoFNode[DOF]].old_p = pNew;
+        }
     } else {
         for (unsigned DOF=0; DOF<calNodeNum; DOF++) {
-            fNodeList[DOFtoFNode[DOF]].new_p = p[DOF];
+            fNodeList[DOFtoFNode[DOF]].old_p = fNodeList[DOFtoFNode[DOF]].new_p;
         }
+        dualOut << "pNew = " << pNew << std::endl;
+    }
+    return;
+}
+/*
+void FluidCal::updatingNewPressureProfile ()
+{
+    for (unsigned DOF=0; DOF<calNodeNum; DOF++) {
+        fNodeList[DOFtoFNode[DOF]].old_p = fNodeList[DOFtoFNode[DOF]].new_p;
     }
 }
-
+*/
 double FluidCal::getP0SecondOrderInterpolate		        (	const double	pNow,
 											                    const double	rNow)
 {
@@ -975,8 +959,8 @@ double FluidCal::getP0SecondOrderInterpolate		        (	const double	pNow,
     double old_r2 = iterHist[1].r;
 
     dualOut << "-----Befor Cal------"<< std::endl;
-    dualOut << "oldp_1    oldp_r2     oldr1     old_r2" << std::endl;
-    dualOut << old_p1 << ' ' << old_p2 << ' ' << old_r1 << ' ' << old_r2 << std::endl;
+    dualOut << "pNow  oldp_1    oldp_p2     oldr1     old_r2" << std::endl;
+    dualOut << pNow << ' ' << old_p1 << ' ' << old_p2 << ' ' << old_r1 << ' ' << old_r2 << std::endl;
 
 	unsigned method;
 	bool isFail = false;
@@ -984,7 +968,7 @@ double FluidCal::getP0SecondOrderInterpolate		        (	const double	pNow,
 	double pNew = 0.0;
 	bool is_rNow_large = std::fabs(rNow)>1.0;
 	if (!is_rNow_large) {
-        if (!isFirstIter) {
+        if (!isFirstP0Iter) {
             double p1p2 = old_p1 - old_p2;
             double p0p2 = pNow - old_p2;
             double p0p1 = pNow - old_p1;
@@ -995,16 +979,16 @@ double FluidCal::getP0SecondOrderInterpolate		        (	const double	pNow,
             old_r2 = old_r1;
             old_r1 = rNow;
             dualOut << "High order predict, " << " d1 = " << d1 << " d2 = " << d2 << std::endl;
-            isFail = ((d1!=d1)||(d2!=d2));
-            if (p0p1<Tiny) {
+//            isFail = ((d1!=d1)||(d2!=d2));
+            if (std::fabs(p0p1<Tiny)) {
                 dualOut << " p0p1 < Tiny, pNow = " << p0p1;
                 dualOut << " p0, p1, p2 = " << pNow << ' ' << old_p1 << ' ' << old_p2 << std::endl;
             }
-            if (p0p2<Tiny) {
+            if (std::fabs(p0p2<Tiny)) {
                 dualOut << " p0p2 < Tiny, old_p1 = " << p0p2;
                 dualOut << " p0, p1, p2 = " << pNow << ' ' << old_p1 << ' ' << old_p2 << std::endl;
             }
-            if (p1p2<Tiny) {
+            if (std::fabs(p1p2<Tiny)) {
                 dualOut << " p1p2 < Tiny, p1p2 = " << old_p2;
                 dualOut << " p0, p1, p2 = " << pNow << ' ' << old_p1 << ' ' << old_p2 << std::endl;
             }
@@ -1044,22 +1028,22 @@ double FluidCal::getP0SecondOrderInterpolate		        (	const double	pNow,
 	dualOut << "FluidCal::logConvgHist ... " << std::endl;
 	std::sprintf(fileName,"%s/%sconvHist%04d.txt",OutputSubFolder,OutputFilePrefix,totalTimeStep);
 	std::ofstream file(fileName, std::ios::out | std::ios::app);
-	if (isFirstIter) {
+	if (isFirstP0Iter) {
 	    file << "Time ="  <<'\t' << time << '\n'
 	         << "pNew"  << '\t' << "res" << '\t' << " pMax" << '\t' << " pMin" << '\t' << "method" << std::endl;
 	}
 	file << pNew  << '\t' << rNow << '\t' << pMax << '\t' << pMin << '\t' << method << std::endl;
 
 	dualOut << "-----After Cal------"<< std::endl;
-	dualOut << "oldp_1    oldp_r2     oldr1     old_r2" << std::endl;
-	dualOut << old_p1 << ' ' << old_p2 << ' ' << old_r1 << ' ' << old_r2 << std::endl;
+	dualOut << "pNew     oldp_1    oldp_r2     oldr1     old_r2" << std::endl;
+	dualOut << pNew << ' ' << old_p1 << ' ' << old_p2 << ' ' << old_r1 << ' ' << old_r2 << std::endl;
 
     iterHist[0].p = iterHist[1].p;
     iterHist[0].r = iterHist[1].r;
     iterHist[1].p = pNow;
     iterHist[1].r = rNow;
 
-	isFirstIter = false;
+	isFirstP0Iter = false;
 	return pNew;
 }
 
@@ -1214,7 +1198,7 @@ bool FluidCal::fillH	()
 						sum_hij -=hij;
 					}
 				} else {
-					q[DOF] += hij*priINodeList[it-priINodeList.begin()].p;
+					q[DOF] += hij* this->getP0(); // priINodeList[it-priINodeList.begin()].p;
 				}
 			}
 		}
@@ -1265,7 +1249,7 @@ std::vector<IDAndInfo>	FluidCal::getIDAndPressure	()
 	std::vector<IDAndInfo>		out;
 	out.resize(fNodeList.size());
 	unsigned fNodeID;
-	double p0 = getPriInjP();
+	double p0 = getP0();
 	for (fNodeID=0; fNodeID<fNodeList.size(); fNodeID++) {
 		out[fNodeID].first 	= fNodeList[fNodeID].LatticeID;
 		out[fNodeID].second = 0.0;
@@ -1352,14 +1336,22 @@ std::vector<double> FluidCal::getLeakOff   ()
     return out;
 }
 
-double FluidCal::getPriInjP()
+double FluidCal::getP0()
 {
+    double avgP0 = 0.0;
+    for (std::vector<PriINode>::iterator it=priINodeList.begin(); it!=priINodeList.end(); ++it) {
+        avgP0 += fNodeList[it->fNodeID].new_p;
+    }
+    avgP0 /= priINodeList.size();
 	return fNodeList[priINodeList[0].fNodeID].new_p;
 }
 
-void FluidCal::updatePriInjP(   double      pNew)
+void FluidCal::updateP0(   double      pNew)
 {
-    fNodeList[priINodeList[0].fNodeID].new_p = pNew;
+    for (std::vector<PriINode>::iterator it=priINodeList.begin(); it!=priINodeList.end(); ++it) {
+        fNodeList[it->fNodeID].new_p = pNew;
+        it->p = pNew;
+    }
 }
 
 std::vector<double>	FluidCal::getFlowRate	()
